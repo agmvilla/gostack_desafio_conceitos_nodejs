@@ -22,7 +22,22 @@ function validateRepoId(request, response, next) {
   return next()
 }
 
+function logRequest(request, response, next) {
+  const { method, url } = request;
+
+  const logLabel = `[${method.toUpperCase()}] ${url}  `
+  console.time(logLabel)
+  next()
+  console.timeEnd(logLabel)
+}
+
+
+
+
+
+
 app.use( "/repositories/:id", validateRepoId );
+app.use( "/", logRequest );
 
 
 app.get("/repositories", (request, response) => {
@@ -36,14 +51,30 @@ app.post("/repositories", (request, response) => {
   console.log(url);
   console.log(techs);
 
-  const repo = { id: uuid(), title, url, techs, likes: '0' }
+  const repo = { id: uuid(), title, url, techs, likes: 0 }
   repositories.push(repo)
 
   return response.json(repo)
 });
 
 app.put("/repositories/:id", (request, response) => {
-  
+  const { id } = request.params;
+  const { url, title, techs } = request.body
+
+  const repoIndex = repositories.findIndex( repo => repo.id == id);
+  if( repoIndex < 0 ) {
+    return response.status(400).json({error: "Repo not found"})
+  }
+
+  const repo = {
+    id: repositories[repoIndex].id,
+    title,
+    url,
+    techs,
+    likes: repositories[repoIndex].likes
+  }
+  repositories[repoIndex] = repo
+  return response.json(repo)
 });
 
 app.delete("/repositories/:id", (request, response) => {
@@ -59,7 +90,17 @@ app.delete("/repositories/:id", (request, response) => {
 });
 
 app.post("/repositories/:id/like", (request, response) => {
-  // TODO
+  const { id } = request.params;
+  
+  const repoIndex = repositories.findIndex( repo => repo.id == id);
+  if( repoIndex < 0 ) {
+    return response.status(400).json({error: "Repo not found"})
+  }
+
+  repositories[repoIndex].likes++
+
+  // return response.status(204).send()
+  return response.json(repositories[repoIndex])
 });
 
 module.exports = app;
